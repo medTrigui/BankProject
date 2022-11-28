@@ -99,7 +99,7 @@ def externalTransfer():
     # This function allows customers/managers/tellers to transfer amounts to an account of another bank
     return
 
-
+#task for anyone
 def showStatement():
     '''the statement of a (past) month of an account should list all the transactions for this account d
     during this month order by time.
@@ -107,6 +107,7 @@ def showStatement():
      Finally, you should show the final account balance for the account at the end of the month.
     '''
     return
+#task for anyone
 def showPendingTransactions():
     return
 
@@ -124,7 +125,7 @@ def addAccountFees():
 
 def showAnalytics():
     return
-
+#whoever has time can add the loan stuff
 def main():
     while True:
         print('''
