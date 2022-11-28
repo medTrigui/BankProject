@@ -1,21 +1,47 @@
 import psycopg2
+
+#import os module
 from os import system, name
 
 connect = psycopg2.connect(host='localhost',
                         user='postgres',
                         password='2002',
                         database='ProjectDDL')
+
 cur=connect.cursor()
+
+#clear screen function
+def clear():
+    # for windows
+    if name == 'nt':
+        _ = system('cls')
+
+    # for mac and linux(here, os.name is 'posix')
+    else:
+        system('clear')
 
 def customerIDs():
     #this function returns an array of all existing customer IDs
     arr = []
-    cur.execute("SELECT CID FROM customer;")
-    rec = cur.fetchone()
-    for row in rec:
-        arr.append(row)
-    return arr
+    '''try:
+        cur.execute("insert into customer values('Mohamed','2792002000','IL','Chicago','3201 s state',6061);")
+        print("it worked")
+        cur.close()
+        connect.commit()
+    except(Exception,psycopg2.DatabaseError) as e:
+        print(e)'''
 
+    cur.execute("SELECT CID FROM customer;")
+    rec = cur.fetchall()
+
+    for row in rec:
+        arr.append(row[0])
+    print(arr)
+    return arr
+customerIDs()
+
+#customerIDs()
+#task for Mohamed
 def showCustomerInformation():
     #This function returns information about the customers
     #Can be accessed by both teller and manager
@@ -26,6 +52,7 @@ def showCustomerInformation():
         table.append(row)
     return table
 
+#Task for Timmy
 def showTellerInformation():
     #This function returns information about the Tellers
     #can be accessed by managers only
@@ -37,28 +64,41 @@ def showTellerInformation():
     return table
 
 
-def createAccount():
-    #This function allows customers/managers to create an account
+#Task for Mohamed
+def createAccountExistingCust():
     return
 
+#Task for Mohamed
+def createAccountNewCust():
+    #This function allows customers/managers to create an account
+    #Ask for home branch
+    return
+
+#Task for Mohamed
 def deleteAccount():
     #This function allows customers/managers to delete accounts
     return
+
+#Task for Timmy
 def withdraw():
     # This function allows customers/managers/tellers to withdraw amounts
     return
 
+#Task for Timmy
 def deposit():
     #This function allows tellers/customers/managers to deposit amounts
     return
 
+#Task for Timmy
 def transfer():
     # This function allows customers/managers/tellers to transfer amounts
     return
 
+#Task for Timmy
 def externalTransfer():
     # This function allows customers/managers/tellers to transfer amounts to an account of another bank
     return
+
 
 def showStatement():
     '''the statement of a (past) month of an account should list all the transactions for this account d
@@ -72,6 +112,7 @@ def showPendingTransactions():
 
 #the following functions can only be executed by managers
 
+#Task for Humberto: manager functions
 def addInterest():
     return
 
@@ -94,6 +135,7 @@ def main():
                     3. Exit                            ''')
 
         choice = input("Enter choice: ")
+        clear()
         if (choice == '1'):
             print('''
                 Welcome Please choose from the following:
@@ -104,6 +146,7 @@ def main():
                 You can return to main menu by pressing any key
                     ''')
             choice1 = input()
+            clear()
             if choice1 == '1':
                 cid = input('Please enter your CID: ')
                 if cid in customerIDs():
@@ -123,8 +166,9 @@ def main():
 
                                                 ''')
                     choix = input()
+                    clear()
                     if choix == 1:
-                        createAccount()
+                        createAccountExistingCust()
 
                     elif choix == 2:
                         withdraw()
@@ -155,7 +199,9 @@ def main():
                     main()
 
             elif choice1 == '2':
-                print('Sign up')
+                print('''
+                Welcome to HTM Bank. We are happy to have you as a new Customer''')
+                createAccountNewCust()
             else:
                 main()
 
@@ -166,8 +212,9 @@ def main():
                     1. Teller Access
                     2. Manager Access
                     ''')
-            choice1 = input('Please enter access')
+            choice1 = input('Please enter access: ')
             eid = input('Enter your SSN: ')
+            clear()
 
             if choice1 =='1':
                 print('Welcome Teller')
@@ -178,6 +225,7 @@ def main():
                         4. Transfer amount
                         5. External Transfer ''')
                 choice2 = input()
+                clear()
                 if choice2 == 1:
                     showCustomerInformation()
 
@@ -208,6 +256,7 @@ def main():
                                     10. Show Analytics''')
 
                 choice2 = input()
+                clear()
                 if choice2 == 1:
                     showCustomerInformation()
 
