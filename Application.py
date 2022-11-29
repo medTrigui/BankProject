@@ -82,12 +82,30 @@ def deleteAccount():
 #Task for Timmy
 def withdraw():
     # This function allows customers/managers/tellers to withdraw amounts
+    print('Enter Account ID')
+    accid = input()
+    cur.execute("SELECT balance FROM account WHERE account.accid = '{}';".format(accid))
+    amt = cur.fetchone()
+    print('Enter withdraw amount')
+    take = input()
+    cur.execute("UPDATE account SET balance = amt[0]-take WHERE account.accid = '{}';".format(accid))
+    print('Withdraw Complete')
     return
 
 #Task for Timmy
 def deposit():
     #This function allows tellers/customers/managers to deposit amounts
+    print('Enter Account ID')
+    accid = input()
+    cur.execute("SELECT balance FROM account WHERE account.accid = '{}';".format(accid))
+    amt = cur.fetchone()
+    print('Enter deposit amount')
+    dep = input()
+    cur.execute("UPDATE account SET balance = amt[0]+dep WHERE account.accid = '{}';".format(accid))
+    print('Deposit Complete')
+
     return
+
 
 #Task for Timmy
 def transfer():
@@ -172,7 +190,7 @@ def main():
                         createAccountExistingCust()
 
                     elif choix == 2:
-                        withdraw()
+                      withdraw()
 
                     elif choix == 3:
                         deposit()
