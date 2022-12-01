@@ -5,8 +5,8 @@ from os import system, name
 
 connect = psycopg2.connect(host='localhost',
                         user='postgres',
-                        password='2002',
-                        database='ProjectDDL')
+                        password='Tonsofun02!',       #'2002'
+                        database='BankProject')             #'ProjectDDL')
 
 cur=connect.cursor()
 
@@ -85,7 +85,7 @@ def withdraw():
     print('Enter Account ID')
     accid = input()
     cur.execute("SELECT balance FROM account WHERE account.accid = '{}';".format(accid))
-    amt = cur.fetchone()
+    amt = cur.fetchall()
     print('Enter withdraw amount')
     take = input()
     cur.execute("UPDATE account SET balance = amt[0]-take WHERE account.accid = '{}';".format(accid))
@@ -98,7 +98,7 @@ def deposit():
     print('Enter Account ID')
     accid = input()
     cur.execute("SELECT balance FROM account WHERE account.accid = '{}';".format(accid))
-    amt = cur.fetchone()
+    amt = cur.fetchall()
     print('Enter deposit amount')
     dep = input()
     cur.execute("UPDATE account SET balance = amt[0]+dep WHERE account.accid = '{}';".format(accid))
@@ -107,9 +107,21 @@ def deposit():
     return
 
 
-#Task for Timmy
+#Task for Timmy      I'll have to check once I get the database connected but I don't think we need the external
+# transfer function. I think one will be fine because knowing the account ID is all that we need, regardless of the branch.
 def transfer():
     # This function allows customers/managers/tellers to transfer amounts
+    print('Enter account number from the account you wish to transfer from')
+    initial = input()
+    print('Enter account number that you would like to transfer funds into')
+    destination = input()
+    cur.execute("SELECT balance FROM account WHERE account.initial = '{}';".format(initial))
+    amt = cur.fetchall()
+    print('Enter transfer amount')
+    trans = input()
+    cur.execute("UPDATE account SET balance = amt[0]+trans WHERE account.destination = '{}';".format(destination))
+    cur.execute("UPDATE account SET balance = amt[0]-trans WHERE account.initial = '{}';".format(initial))
+    print('Transfer Complete')
     return
 
 #Task for Timmy
