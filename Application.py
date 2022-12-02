@@ -196,8 +196,6 @@ def deleteAccount():
         acc = input("Please enter the accout ID that you would like to remove: ")
         cur.execute("Delete from account  where account.accid = '{}';".format(acc))
         connect.commit()
-        cur.execute("Delete from owns  where owns.account = '{}';".format(acc))
-        connect.commit()
 
         clear()
         print("Account deleted successfully!")
