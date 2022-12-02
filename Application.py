@@ -6,7 +6,7 @@ from os import system, name
 connect = psycopg2.connect(host='localhost',
                         user='postgres',
                         password='Tonsofun02!',       #'2002'
-                        database='BankProject')             #'ProjectDDL')
+                        database='BankProject2')             #'ProjectDDL')
 
 cur=connect.cursor()
 
@@ -78,49 +78,71 @@ def createAccountNewCust():
 def deleteAccount():
     #This function allows customers/managers to delete accounts
     return
-
+def check_account(cid,accids):
+    cur.execute("SELECT ownedby FROM owns WHERE owns.account = '{}';".format(accids))
+    check = cur.fetchall()
+    arr = []
+    for row in check:
+        arr.append(row[0])
+    if cid not in arr:
+        return False
+    return True
 #Task for Timmy
-def withdraw():
+def withdraw(cid):
     # This function allows customers/managers/tellers to withdraw amounts
-    print('Enter Account ID')
-    accid = input()
-    cur.execute("SELECT balance FROM account WHERE account.accid = '{}';".format(accid))
-    amt = cur.fetchall()
-    print('Enter withdraw amount')
-    take = input()
-    cur.execute("UPDATE account SET balance = amt[0]-take WHERE account.accid = '{}';".format(accid))
+    accids = input('Enter Account ID: ')
+    if check_account(cid,accids) != True:
+        print('Not your account')
+        return
+    cur.execute("SELECT balance FROM account WHERE account.accid = '{}';".format(accids))
+    amt = cur.fetchone()
+    take = input('Enter withdraw amount')
+    bal = float(amt[0])-float(take)
+    cur.execute("UPDATE account SET balance = {} WHERE account.accid = '{}';".format(bal, accids))
     print('Withdraw Complete')
+    cur.execute("SELECT * FROM account;")
+    rec = cur.fetchall()
+    print(rec)
     return
 
 #Task for Timmy
-def deposit():
+def deposit(cid):
     #This function allows tellers/customers/managers to deposit amounts
-    print('Enter Account ID')
-    accid = input()
-    cur.execute("SELECT balance FROM account WHERE account.accid = '{}';".format(accid))
-    amt = cur.fetchall()
-    print('Enter deposit amount')
-    dep = input()
-    cur.execute("UPDATE account SET balance = amt[0]+dep WHERE account.accid = '{}';".format(accid))
+    accids = input('Enter Account ID: ')
+    if check_account(cid, accids) != True:
+        print('Not your account')
+        return
+    cur.execute("SELECT balance FROM account WHERE account.accid = '{}';".format(accids))
+    amt = cur.fetchone()
+    dep = input('Enter deposit amount')
+    bal = float(amt[0]) + float(dep)
+    cur.execute("UPDATE account SET balance = {} WHERE account.accid = '{}';".format(bal, accids))
     print('Deposit Complete')
+    cur.execute("SELECT * FROM account;")
+    rec = cur.fetchall()
+    print(rec)
 
     return
 
 
 #Task for Timmy      I'll have to check once I get the database connected but I don't think we need the external
 # transfer function. I think one will be fine because knowing the account ID is all that we need, regardless of the branch.
-def transfer():
+def transfer(cid):
     # This function allows customers/managers/tellers to transfer amounts
-    print('Enter account number from the account you wish to transfer from')
-    initial = input()
-    print('Enter account number that you would like to transfer funds into')
-    destination = input()
-    cur.execute("SELECT balance FROM account WHERE account.initial = '{}';".format(initial))
-    amt = cur.fetchall()
-    print('Enter transfer amount')
-    trans = input()
-    cur.execute("UPDATE account SET balance = amt[0]+trans WHERE account.destination = '{}';".format(destination))
-    cur.execute("UPDATE account SET balance = amt[0]-trans WHERE account.initial = '{}';".format(initial))
+    initial = input('Enter account number from the account you wish to transfer from: ')
+    if check_account(cid,initial) != True:
+        print('Not your account: ')
+        return
+    destination = input('Enter account number that you would like to transfer funds into: ')
+    cur.execute("SELECT balance FROM account WHERE account.accid = '{}';".format(initial))
+    amt_i = cur.fetchone()
+    cur.execute("SELECT balance FROM account WHERE account.accid = '{}';".format(destination))
+    amt_d = cur.fetchone()
+    trans = input('Enter transfer amount: ')
+    bal_i = float(amt_i[0]) - float(trans)
+    bal_d = float(amt_d[0]) + float(trans)
+    cur.execute("UPDATE account SET balance = {} WHERE account.accid = '{}';".format(bal_d, destination))
+    cur.execute("UPDATE account SET balance = {} WHERE account.accid = '{}';".format(bal_i, initial))
     print('Transfer Complete')
     return
 
@@ -198,31 +220,32 @@ def main():
                                                 ''')
                     choix = input()
                     clear()
-                    if choix == 1:
+                    if choix == '1':
                         createAccountExistingCust()
 
-                    elif choix == 2:
-                      withdraw()
+                    elif choix == '2':
+                        print('ran')
+                        withdraw(cid)
 
-                    elif choix == 3:
-                        deposit()
+                    elif choix == '3':
+                        deposit(cid)
 
-                    elif choix == 4:
-                        transfer()
+                    elif choix == '4':
+                        transfer(cid)
 
-                    elif choix == 5:
-                        externalTransfer()
+                    elif choix == '5':
+                        externalTransfer(cid)
 
-                    elif choix == 6:
+                    elif choix == '6':
                         deleteAccount()
 
-                    elif choix == 7:
+                    elif choix == '7':
                         showStatement()
 
-                    elif choix == 8:
+                    elif choix == '8':
                         showPendingTransactions()
 
-                    elif choix == 9:
+                    elif choix == '9':
                         main()
 
                 else:
@@ -257,19 +280,19 @@ def main():
                         5. External Transfer ''')
                 choice2 = input()
                 clear()
-                if choice2 == 1:
+                if choice2 == '1':
                     showCustomerInformation()
 
-                elif choice2 == 2:
+                elif choice2 == '2':
                     withdraw()
 
-                elif choice2 == 3:
+                elif choice2 == '3':
                     deposit()
 
-                elif choice2 == 4:
+                elif choice2 == '4':
                     transfer()
 
-                elif choice2 == 5:
+                elif choice2 == '5':
                     externalTransfer()
 
             elif choice1 == '2':
@@ -288,34 +311,34 @@ def main():
 
                 choice2 = input()
                 clear()
-                if choice2 == 1:
+                if choice2 == '1':
                     showCustomerInformation()
 
-                elif choice2 == 2:
+                elif choice2 == '2':
                     showTellerInformation()
 
-                elif choice2 == 3:
+                elif choice2 == '3':
                     withdraw()
 
-                elif choice2 == 4:
+                elif choice2 == '4':
                     deposit()
 
-                elif choice2 == 5:
+                elif choice2 == '5':
                     transfer()
 
-                elif choice2 == 6:
+                elif choice2 == '6':
                     externalTransfer()
 
-                elif choice2 == 7:
+                elif choice2 == '7':
                     addInterest()
 
-                elif choice2 == 8:
+                elif choice2 == '8':
                     addOverDraftFees()
 
-                elif choice2 == 9:
+                elif choice2 == '9':
                     addAccountFees()
 
-                elif choice2 == 10:
+                elif choice2 == '10':
                     showAnalytics()
 
                 else:
