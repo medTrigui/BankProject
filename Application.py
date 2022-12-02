@@ -1,11 +1,12 @@
 import psycopg2
+from datetime import date
 from os import system, name
 import random
 
 connect = psycopg2.connect(host='localhost',
                         user='postgres',
-                        password='2002',
-                        database='ProjectDDL')
+                        password='Tonsofun02!',
+                        database='BankProject2')
 
 cur=connect.cursor()
 #clear screen function
@@ -239,13 +240,6 @@ def check_account(cid,accids):
 #Task for Timmy
 def withdraw(cid):
     # This function allows customers/managers/tellers to withdraw amounts
-    print('Enter Account ID')
-    accid = input()
-    cur.execute("SELECT balance FROM account WHERE account.accid = '{}';".format(accid))
-    amt = cur.fetchall()
-    print('Enter withdraw amount')
-    take = input()
-    cur.execute("UPDATE account SET balance = amt[0]-take WHERE account.accid = '{}';".format(accid))
     accids = input('Enter Account ID: ')
     if check_account(cid,accids) != True:
         print('Not your account')
@@ -255,23 +249,13 @@ def withdraw(cid):
     take = input('Enter withdraw amount')
     bal = float(amt[0])-float(take)
     cur.execute("UPDATE account SET balance = {} WHERE account.accid = '{}';".format(bal, accids))
+    connect.commit()
     print('Withdraw Complete')
-    cur.execute("SELECT * FROM account;")
-    rec = cur.fetchall()
-    print(rec)
-    return
 
 #Task for Timmy
 
 def deposit(cid):
     #This function allows tellers/customers/managers to deposit amounts
-    print('Enter Account ID')
-    accid = input()
-    cur.execute("SELECT balance FROM account WHERE account.accid = '{}';".format(accid))
-    amt = cur.fetchall()
-    print('Enter deposit amount')
-    dep = input()
-    cur.execute("UPDATE account SET balance = amt[0]+dep WHERE account.accid = '{}';".format(accid))
     accids = input('Enter Account ID: ')
     if check_account(cid, accids) != True:
         print('Not your account')
@@ -281,6 +265,7 @@ def deposit(cid):
     dep = input('Enter deposit amount')
     bal = float(amt[0]) + float(dep)
     cur.execute("UPDATE account SET balance = {} WHERE account.accid = '{}';".format(bal, accids))
+    connect.commit()
     print('Deposit Complete')
     cur.execute("SELECT * FROM account;")
     rec = cur.fetchall()
@@ -294,19 +279,49 @@ def deposit(cid):
 
 def transfer(cid):
     # This function allows customers/managers/tellers to transfer amounts
-    print('Enter account number from the account you wish to transfer from')
-    initial = input()
-    print('Enter account number that you would like to transfer funds into')
-    destination = input()
-    cur.execute("SELECT balance FROM account WHERE account.initial = '{}';".format(initial))
-    amt = cur.fetchall()
-    print('Enter transfer amount')
-    trans = input()
-    cur.execute("UPDATE account SET balance = amt[0]+trans WHERE account.destination = '{}';".format(destination))
-    cur.execute("UPDATE account SET balance = amt[0]-trans WHERE account.initial = '{}';".format(initial))
     initial = input('Enter account number from the account you wish to transfer from: ')
     if check_account(cid,initial) != True:
         print('Not your account: ')
+        return
+    cur.execute("SELECT homebranch FROM customer WHERE customer.cid = '{}';".format(cid))
+    branch1 = cur.fetchone()
+    destination = input('Enter account number that you would like to transfer funds into: ')
+    cur.execute("SELECT ownedby FROM owns WHERE owns.account = '{}';".format(destination))
+    num = cur.fetchone()
+    cur.execute("SELECT homebranch FROM customer WHERE customer.cid = '{}';".format(num[0]))
+    branch2 = cur.fetchone()
+    if branch1[0] != branch2[0]:
+        print('This is an external transfer')
+        return
+    cur.execute("SELECT balance FROM account WHERE account.accid = '{}';".format(initial))
+    amt_i = cur.fetchone()
+    cur.execute("SELECT balance FROM account WHERE account.accid = '{}';".format(destination))
+    amt_d = cur.fetchone()
+    trans = input('Enter transfer amount: ')
+    bal_i = float(amt_i[0]) - float(trans)
+    bal_d = float(amt_d[0]) + float(trans)
+    cur.execute("UPDATE account SET balance = {} WHERE account.accid = '{}';".format(bal_d, destination))
+    connect.commit()
+    cur.execute("UPDATE account SET balance = {} WHERE account.accid = '{}';".format(bal_i, initial))
+    connect.commit()
+    print('Transfer Complete')
+    return
+#Task for Timmy
+def externalTransfer(cid):
+    # This function allows customers/managers/tellers to transfer amounts to an account of another bank
+    initial = input('Enter account number from the account you wish to transfer from: ')
+    if check_account(cid, initial) != True:
+        print('Not your account: ')
+        return
+    cur.execute("SELECT homebranch FROM customer WHERE customer.cid = '{}';".format(cid))
+    branch1 = cur.fetchone()
+    destination = input('Enter account number that you would like to transfer funds into: ')
+    cur.execute("SELECT ownedby FROM owns WHERE owns.account = '{}';".format(destination))
+    num = cur.fetchone()
+    cur.execute("SELECT homebranch FROM customer WHERE customer.cid = '{}';".format(num[0]))
+    branch2 = cur.fetchone()
+    if branch1[0] == branch2[0]:
+        print('This is not an external transfer')
         return
     destination = input('Enter account number that you would like to transfer funds into: ')
     cur.execute("SELECT balance FROM account WHERE account.accid = '{}';".format(initial))
@@ -317,23 +332,28 @@ def transfer(cid):
     bal_i = float(amt_i[0]) - float(trans)
     bal_d = float(amt_d[0]) + float(trans)
     cur.execute("UPDATE account SET balance = {} WHERE account.accid = '{}';".format(bal_d, destination))
+    connect.commit()
     cur.execute("UPDATE account SET balance = {} WHERE account.accid = '{}';".format(bal_i, initial))
+    connect.commit()
     print('Transfer Complete')
     return
-#Task for Timmy
-def externalTransfer():
-    # This function allows customers/managers/tellers to transfer amounts to an account of another bank
-    return
 
-#task for Timmy or Humberto
-def showStatement():
+#task for Timmy
+def showStatement(cid):
     '''the statement of a (past) month of an account should list all the transactions for this account d
     during this month order by time.
     Furthermore, the account balance after each transaction should be shown.
      Finally, you should show the final account balance for the account at the end of the month.
     '''
+    acct = input('Enter account number: ')
+    if check_account(cid,acct) != True:
+        print('Incorrect account number')
+        return
+    latest = date.today()
+    latest.month = latest.month - 1
+    cur.execute("SELECT * FROM transactions WHERE transactions.performedby = '{}' AND transactions.date < {}};".format(acct, latest))
     return
-#task for Timmy or Humberto
+#task for Humberto
 def showPendingTransactions():
     return
 
@@ -408,13 +428,13 @@ def main():
                         transfer(cid)
 
                     elif choix == '5':
-                        externalTransfer()
+                        externalTransfer(cid)
 
                     elif choix == '6':
                         deleteAccount()
 
                     elif choix == '7':
-                        showStatement()
+                        showStatement(cid)
 
                     elif choix == '8':
                         showPendingTransactions()
