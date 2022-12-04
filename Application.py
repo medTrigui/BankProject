@@ -380,10 +380,11 @@ def showStatement(cid):
     latest = date.today()
     latest.month = latest.month - 1
     cur.execute(
-        "SELECT t_type, amount FROM transactions WHERE transactions.performedby = '{}' AND transactions.date > '{}-{}-{}'};".format(acct,
-                                                                                                                       latest.year,
-                                                                                                                       12 if latest.month==1 else latest.month-1,
-                                                                                                                       latest.day))
+        "SELECT t_type, amount FROM transactions WHERE transactions.performedby = '{}' AND transactions.date > '{}-{}-{}'};".format(
+            acct,
+            latest.year,
+            12 if latest.month == 1 else latest.month - 1,
+            latest.day))
     return
 
 
@@ -401,7 +402,7 @@ def showPendingTransactions(cid):
             12 if latest.month == 1 else latest.month - 1,
             latest.day))
     transactions = cur.fetchall()
-    cur.execute("SELECT balance FROM account WHERE accid = {}".format(acct))
+    cur.execute("SELECT balance FROM account WHERE accid = '{}'".format(acct))
     balance = cur.fetchone()[0]
     for rows in transactions[::-1]:  # reversed the list transactions going to rebuild the balance
         balance += -rows[1]
@@ -410,6 +411,7 @@ def showPendingTransactions(cid):
         balance += -rows[1]
         text += "{}ed ${} on {} with a resulting balance of ${}.\n".format(rows[0], rows[1], rows[3], balance)
     text = "Your ending balance for the month was ${}".format(balance)
+    print(text)
     return
 
 
@@ -433,11 +435,12 @@ def addInterest():
             curAccount = rows[0]
             cur.execute("SELECT interest FROM account_type WHERE acctype = '{}'".format(rows[2]))
             interest = cur.fetchone()[0]
-            newBalance = (rows[1] * (interest))/100 + rows[1]
+            newBalance = (rows[1] * (interest)) / 100 + rows[1]
             cur.execute("UPDATE account SET balance = {} WHERE account.accid = '{}'".format(newBalance, curAccount))
             connect.commit()
     print("Added interest to customers of branch: {}".format(bid))
     return
+
 
 def addOverDraftFees():
     bid = input("Please select you branch's BID: ")
@@ -461,6 +464,7 @@ def addOverDraftFees():
     print("Added Overdraft Fees")
     return
 
+
 def addAccountFees():
     bid = input("Please select you branch's BID: ")
     cur.execute("SELECT CID FROM customer WHERE homebranch = '{}'".format(bid))
@@ -478,12 +482,13 @@ def addAccountFees():
             curAccount = rows[0]
             cur.execute("SELECT minbalance, fee FROM account_type WHERE acctype = '{}'".format(rows[2]))
             aType = cur.fetchone()
-            if aType[0] > rows[1]: # the balance is less than the min balance
+            if aType[0] > rows[1]:  # the balance is less than the min balance
                 cur.execute("UPDATE account SET balance = balance - {} WHERE account.accid = '{}'".format(aType[1],
-                                                                                                        curAccount))
+                                                                                                          curAccount))
                 connect.commit()
     print("Added Account Fees")
     return
+
 
 def askForCID():
     cid = input("Which customer do you want to do this action for: ")
@@ -492,10 +497,18 @@ def askForCID():
         cid = input("Sorry that customer doesn't exists\n Please input a valid CID: ")
     return cid
 
+
 def isManager(ssn):
     cur.execute("SELECT ssn FROM manager WHERE ssn = {}".format(ssn))
     manager = cur.fetchone()
     return manager is not None
+
+
+def isTeller(ssn):
+    cur.execute("SELECT ssn FROM teller WHERE ssn = {}".format(ssn))
+    tell = cur.fetchone()
+    return tell is not None
+
 
 def addEmployee():
     ssn = input("To add a new employee please enter their SSN: ")
@@ -526,13 +539,12 @@ def addEmployee():
 
     choice = input("What type of employee do you want to add?\n" +
                    "\t1: Teller\n\t2: Manager\nEnter: ")
-    choice = choice.replace(" ", "") # deletes any whitespace
+    choice = choice.replace(" ", "")  # deletes any whitespace
     while choice != "1" or choice != "2":
         choice = input("Invalid input\nEnter a valid choice: ")
 
 
 def showAnalytics():
-
     return
 
 
@@ -637,6 +649,10 @@ def main():
             clear()
 
             if choice1 == '1':
+                if not isTeller(eid):
+                    print("Sorry you are not a manager or your SSN is not in our system.\n" +
+                          "Returning you to the main screen")
+                    continue
                 print('Welcome Teller')
                 print('''
                         1. Show Customer information
