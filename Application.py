@@ -418,22 +418,23 @@ def showPendingTransactions(cid):
 # Task for Humberto: manager functions
 def addInterest():
     bid = input("Please select you branch's BID: ")
-    cur.execute("SELECT CID FROM customer WHERE homebranch = '{}'".format(bid))
+    cur.execute("SELECT CID FROM customer WHERE homebranch = '{} '".format(bid))
     customers = {}
 
     for row in cur.fetchall():
         customers[row[0]] = ""
-
+    print(customers)
     cur.execute("SELECT * FROM account;")
     negativeBalances = cur.fetchall();
     for rows in negativeBalances:
-        cur.execute("SELECT cid FROM OWNS where accid = {}".rows[0])
-        if cur.fetchone()[0] in customers:
+        cur.execute("SELECT ownedby FROM OWNS where account = '{}'".format(rows[0]))
+        curCust = cur.fetchone()
+        if curCust is not None and curCust[0] in customers:
             curAccount = rows[0]
             cur.execute("SELECT interest FROM account_type WHERE acctype = '{}'".format(rows[2]))
             interest = cur.fetchone()[0]
-            newBalance = (rows[1] * interest) + rows[1]
-            cur.execute("UPDATE account SET balance = {} WHERE account.accid = {}".format(newBalance, curAccount));
+            newBalance = (rows[1] * (interest))/100 + rows[1]
+            cur.execute("UPDATE account SET balance = {} WHERE account.accid = '{}'".format(newBalance, curAccount));
             connect.commit()
     print("Added interest to customers of branch: {}".format(bid))
     return
@@ -449,8 +450,9 @@ def addOverDraftFees():
     cur.execute("SELECT accid, account_type FROM account WHERE account.balance < 0;")
     negativeBalances = cur.fetchall();
     for rows in negativeBalances:
-        cur.execute("SELECT cid FROM OWNS where accid = {}".rows[0])
-        if cur.fetchone()[0] in customers:
+        cur.execute("SELECT ownedby FROM OWNS where account = '{}'".format(rows[0]))
+        curCust = cur.fetchone()
+        if curCust is not None and curCust[0] in customers:
             curAccount = rows[0]
             cur.execute("SELECT fee FROM account_type WHERE acctype = '{}'".format(rows[1]))
             fee = cur.fetchone()[0]
@@ -470,13 +472,14 @@ def addAccountFees():
     cur.execute("SELECT * FROM account")
     negativeBalances = cur.fetchall();
     for rows in negativeBalances:
-        cur.execute("SELECT cid FROM OWNS where accid = {}".rows[0])
-        if cur.fetchone()[0] in customers:
+        cur.execute("SELECT ownedby FROM OWNS where account = '{}'".format(rows[0]))
+        curCust = cur.fetchone()
+        if curCust is not None and curCust[0] in customers:
             curAccount = rows[0]
             cur.execute("SELECT minbalance, fee FROM account_type WHERE acctype = '{}'".format(rows[2]))
             aType = cur.fetchone()
             if aType[0] > rows[1]: # the balance is less than the min balance
-                cur.execute("UPDATE account SET balance = balance - {} WHERE account.accid = {}".format(aType[1],
+                cur.execute("UPDATE account SET balance = balance - {} WHERE account.accid = '{}'".format(aType[1],
                                                                                                         curAccount));
                 connect.commit()
     print("Added Account Fees")
