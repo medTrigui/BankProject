@@ -490,7 +490,7 @@ def addAccountFees():
     return
 
 
-def askForCID(ssn):
+def askForCID(ssn): # when I use the bank of the same company a teller can help me even if its not my homebranch
     cid = input("Which customer do you want to do this action for: ")
     customers = customerIDs()
     while cid not in customers:
@@ -540,7 +540,7 @@ def addEmployee():
     choice = input("What type of employee do you want to add?\n" +
                    "\t1: Teller\n\t2: Manager\nEnter: ")
     choice = choice.replace(" ", "")  # deletes any whitespace
-    while choice != "1" or choice != "2":
+    while choice != "1" and choice != "2":
         choice = input("Invalid input\nEnter a valid choice: ")
     if choice == "1":
         cur.execute("INSERT INTO teller values ('{}', '{}', {})".format(ssn, branch, True))
@@ -551,6 +551,36 @@ def addEmployee():
 
 
 def showAnalytics():
+    print("Welcome to Analytics.")
+    choice = input("Do you want to check the "+
+                   "net worth of all customers "+
+                   "for a branch or system wide\n"+
+                   "1: Branch\n2: System wide\n")
+    while choice != "1" and choice != "2":
+        choice = input("Please enter a valid choice: ")
+    if choice == "1":
+        print("What branch do you want to run this test on: ")
+        showBranhes()
+        branch = input()
+        while branch not in checkExistingBranch():
+            clear()
+            print("The branch you entered does not exist. Try again: \n")
+            print('Please chose a Branch from the following (Please enter the 3-digit branch ID): \n')
+            showBranhes()
+            branch = input()
+        cur.execute("SELECT SUM(balance),homebranch FROM account " +
+                    "Join owns Join customer ON customer.cid = owns.ownedby " +
+                    "ON owns.account = account.accid " +
+                    "WHERE homebranch = '{}' GROUP BY customer.homebranch;".format(branch))
+        net = cur.fetchone()[0]
+        print("The networth of the branch {} is ${}".format(branch, net))
+    else:
+        cur.execute("SELECT SUM(balance) FROM account " +
+                    "Join owns Join customer ON customer.cid = owns.ownedby " +
+                    "ON owns.account = account.accid ")
+        net = cur.fetchone()[0]
+        print("The networth of all of our bank's customers is ${}".format(net))
+
     return
 
 
