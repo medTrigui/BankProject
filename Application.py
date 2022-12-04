@@ -490,7 +490,7 @@ def addAccountFees():
     return
 
 
-def askForCID():
+def askForCID(ssn):
     cid = input("Which customer do you want to do this action for: ")
     customers = customerIDs()
     while cid not in customers:
@@ -542,6 +542,12 @@ def addEmployee():
     choice = choice.replace(" ", "")  # deletes any whitespace
     while choice != "1" or choice != "2":
         choice = input("Invalid input\nEnter a valid choice: ")
+    if choice == "1":
+        cur.execute("INSERT INTO teller values ('{}', '{}', {})".format(ssn, branch, True))
+        print("Successfully added the new teller to the branch {}".format(branch))
+    else:
+        cur.execute("INSERT INTO manager values ('{}', '{}', {})".format(ssn, branch, True))
+        print("Successfully added the new manager to the branch {}".format(branch))
 
 
 def showAnalytics():
