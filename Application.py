@@ -5,8 +5,8 @@ import random
 
 connect = psycopg2.connect(host='localhost',
                            user='postgres',
-                           password='WowNice!',  # Tonsofun02
-                           dbname='postgres')  # BankProject2
+                           password='2002',  # Tonsofun02
+                           dbname='ProjectDDL')  # BankProject2
 
 cur = connect.cursor()
 
@@ -123,11 +123,9 @@ def showBranhes():
     rec = cur.fetchall()
     n = 0
     for row in rec:
-        n += 1
-        print("Here are the branches (BID, State, City, Stree, zip)")
-        for element in row:
-            text += str(element) + " "
-        text += "\n"
+        n = n+1
+        separator = ', '
+        text = str(7-n) +". " +  separator.join(row) + "\n" + text
     print(text)
     return text
 
@@ -183,7 +181,7 @@ def createAccountNewCust():
     while ans not in ['1', '2']:
         ans = input('''Invalid choice.. Try again:
                         What type of account would you like to open today ? 
-                        
+
                             1. Savings Account
                             2. Checking Account \n''')
     try:
@@ -205,49 +203,24 @@ def createAccountNewCust():
     except(Exception, psycopg2.DatabaseError) as e:
         print(e)
 
-
+'''def showAccountsForCustomer(cid):
+    cur.execute("as temp
+    rec = cur.fetchall()
+    text = ''
+    cur.execute("SELECT * FROM account JOIN owns ON account.accid = owns.account and owns.ownedby = '{}';".format(cid))
+    rec = cur.fetchall()
+    n = 0
+    for row in rec:
+        for data in row:
+            data = str(data)
+        print(row)
+        n = n + 1
+        separator = ', '
+        text = str(7 - n) + ". " + separator.join(row) + "\n" + text
+    #print(text)
+    return text
+showAccountsForCustomer('2792002000')'''
 # Task for Mohamed
-def deleteAccount():
-    # This function allows customers/managers to delete accounts
-    print("Are you sure you would like to remove your account? ")
-    ans = input()
-    if ans.lower() == 'yes':
-        id = input("Please enter your CID: ")
-        acc = input("Please enter the accout ID that you would like to remove: ")
-        cur.execute("Delete from account  where account.accid = '{}';".format(acc))
-        connect.commit()
-        cur.execute("Delete from owns  where owns.account = '{}';".format(acc))
-        connect.commit()
-
-        clear()
-        print("Account deleted successfully!")
-        tab = []
-        cur.execute("SELECT ownedby FROM owns;")
-        rec = cur.fetchall()
-        for row in rec:
-            tab.append(row[0])
-        if id not in tab:
-            print('''You currently do not have any account open at HTM Bank.
-                    Would you like to open a new account? ''')
-            ans1 = input()
-            while ans1 not in ['yes', 'no']:
-                ans1 = input("Invalid choice. Please try again.  Would you like to open a new account?")
-            if ans1.lower() == 'yes':
-                createAccountNewCust()
-            elif ans1.lower() == 'no':
-                print(
-                    "In this case, we are sorry to inform you that your customer record will be deleted from our database. You can alwys sign-up again as a new customer. See you soon!")
-                cur.execute("Delete from Customer  where Customer.cid = '{}';".format(id))
-                connect.commit()
-                main()
-
-
-    elif ans.lower() == 'no':
-        print("No problem.. Returning to main")
-        main()
-    else:
-        print("Invalid answer.. Try again.")
-        deleteAccount()
 
 
 def check_account(cid, accids):
@@ -387,7 +360,6 @@ def showStatement(cid):
             latest.day))
     return
 
-
 # task for Humberto
 def showPendingTransactions(cid):
     acct = input('Enter account number: ')
@@ -420,7 +392,7 @@ def showPendingTransactions(cid):
 # Task for Humberto: manager functions
 def addInterest():
     bid = input("Please select you branch's BID: ")
-    cur.execute("SELECT CID FROM customer WHERE homebranch = '{} '".format(bid))
+    cur.execute("SELECT CID FROM customer WHERE customer.BranchID = '{} '".format(bid))
     customers = {}
 
     for row in cur.fetchall():
@@ -580,7 +552,6 @@ def showAnalytics():
                     "ON owns.account = account.accid ")
         net = cur.fetchone()[0]
         print("The networth of all of our bank's customers is ${}".format(net))
-
     return
 
 
@@ -775,5 +746,48 @@ def main():
             print('Invalid Choice')
             continue
 
+def deleteAccount():
+    # This function allows customers/managers to delete accounts
+    print("Are you sure you would like to remove your account? ")
+    ans = input()
+    if ans.lower() == 'yes':
+        id = input("Please enter your CID: ")
+        clear()
+        #showAccountsForCustomer(id)
+        acc = input("Please enter the accout ID that you would like to remove: ")
+        cur.execute("Delete from account  where account.accid = '{}';".format(acc))
+        connect.commit()
+
+        clear()
+        print("Account deleted successfully!")
+        tab = []
+        cur.execute("SELECT ownedby FROM owns;")
+        rec = cur.fetchall()
+        for row in rec:
+            tab.append(row[0])
+        if id not in tab:
+            print('''You currently do not have any account open at HTM Bank.
+                    Would you like to open a new account? ''')
+            ans1 = input()
+            while ans1 not in ['yes', 'no']:
+                ans1 = input("Invalid choice. Please try again.  Would you like to open a new account?")
+            if ans1.lower() == 'yes':
+                createAccountNewCust()
+            elif ans1.lower() == 'no':
+                print(
+                    "In this case, we are sorry to inform you that your customer record will be deleted from our database. You can alwys sign-up again as a new customer. See you soon!")
+                cur.execute("Delete from Customer  where Customer.cid = '{}';".format(id))
+                connect.commit()
+                main()
+
+    elif ans.lower() == 'no':
+        print("No problem.. Returning to main")
+        main()
+    else:
+        print("Invalid answer.. Try again.")
+        deleteAccount()
 
 main()
+
+
+
