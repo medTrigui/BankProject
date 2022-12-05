@@ -310,7 +310,7 @@ def transfer(cid):
 def externalTransfer(cid):
     # This function allows customers/managers/tellers to transfer amounts to an account of another bank
     initial = input('Enter account number from the account you wish to transfer from: ')
-    if check_account(cid, initial) != True:
+    if not check_account(cid, initial):
         print('Not your account: ')
         return
     cur.execute("SELECT homebranch FROM customer WHERE customer.cid = '{}';".format(cid))
@@ -358,8 +358,7 @@ def showStatement(cid):
             latest.year,
             12 if latest.month == 1 else latest.month - 1,
             latest.day))
-
-
+    return
 
 # task for Humberto
 def showPendingTransactions(cid):
@@ -375,15 +374,16 @@ def showPendingTransactions(cid):
             12 if latest.month == 1 else latest.month - 1,
             latest.day))
     transactions = cur.fetchall()
-    cur.execute("SELECT balance FROM account WHERE accid = {}".format(acct))
+    cur.execute("SELECT balance FROM account WHERE accid = '{}'".format(acct))
     balance = cur.fetchone()[0]
     for rows in transactions[::-1]:  # reversed the list transactions going to rebuild the balance
         balance += -rows[1]
     text = "Your starting balance for the month was: ${}\n".format(balance)
     for rows in transactions:
         balance += -rows[1]
-        text += "{}ed ${} on {} with a resulting balance of ${}.\n".format(rows[0], rows[3], rows[1])
+        text += "{}ed ${} on {} with a resulting balance of ${}.\n".format(rows[0], rows[1], rows[3], balance)
     text = "Your ending balance for the month was ${}".format(balance)
+    print(text)
     return
 
 
@@ -399,7 +399,7 @@ def addInterest():
         customers[row[0]] = ""
     print(customers)
     cur.execute("SELECT * FROM account;")
-    negativeBalances = cur.fetchall();
+    negativeBalances = cur.fetchall()
     for rows in negativeBalances:
         cur.execute("SELECT ownedby FROM OWNS where account = '{}'".format(rows[0]))
         curCust = cur.fetchone()
@@ -408,7 +408,7 @@ def addInterest():
             cur.execute("SELECT interest FROM account_type WHERE acctype = '{}'".format(rows[2]))
             interest = cur.fetchone()[0]
             newBalance = (rows[1] * (interest)) / 100 + rows[1]
-            cur.execute("UPDATE account SET balance = {} WHERE account.accid = '{}'".format(newBalance, curAccount));
+            cur.execute("UPDATE account SET balance = {} WHERE account.accid = '{}'".format(newBalance, curAccount))
             connect.commit()
     print("Added interest to customers of branch: {}".format(bid))
     return
@@ -423,7 +423,7 @@ def addOverDraftFees():
         customers[row[0]] = ""
 
     cur.execute("SELECT accid, account_type FROM account WHERE account.balance < 0;")
-    negativeBalances = cur.fetchall();
+    negativeBalances = cur.fetchall()
     for rows in negativeBalances:
         cur.execute("SELECT ownedby FROM OWNS where account = '{}'".format(rows[0]))
         curCust = cur.fetchone()
@@ -431,7 +431,7 @@ def addOverDraftFees():
             curAccount = rows[0]
             cur.execute("SELECT fee FROM account_type WHERE acctype = '{}'".format(rows[1]))
             fee = cur.fetchone()[0]
-            cur.execute("UPDATE account SET balance = balance - {} WHERE account.accid = {}".format(fee, curAccount));
+            cur.execute("UPDATE account SET balance = balance - {} WHERE account.accid = {}".format(fee, curAccount))
             connect.commit()
     print("Added Overdraft Fees")
     return
@@ -446,7 +446,7 @@ def addAccountFees():
         customers[row[0]] = ""
 
     cur.execute("SELECT * FROM account")
-    negativeBalances = cur.fetchall();
+    negativeBalances = cur.fetchall()
     for rows in negativeBalances:
         cur.execute("SELECT ownedby FROM OWNS where account = '{}'".format(rows[0]))
         curCust = cur.fetchone()
@@ -456,13 +456,13 @@ def addAccountFees():
             aType = cur.fetchone()
             if aType[0] > rows[1]:  # the balance is less than the min balance
                 cur.execute("UPDATE account SET balance = balance - {} WHERE account.accid = '{}'".format(aType[1],
-                                                                                                          curAccount));
+                                                                                                          curAccount))
                 connect.commit()
     print("Added Account Fees")
     return
 
 
-def askForCID():
+def askForCID(ssn): # when I use the bank of the same company a teller can help me even if its not my homebranch
     cid = input("Which customer do you want to do this action for: ")
     customers = customerIDs()
     while cid not in customers:
@@ -470,7 +470,88 @@ def askForCID():
     return cid
 
 
+def isManager(ssn):
+    cur.execute("SELECT ssn FROM manager WHERE ssn = {}".format(ssn))
+    manager = cur.fetchone()
+    return manager is not None
+
+
+def isTeller(ssn):
+    cur.execute("SELECT ssn FROM teller WHERE ssn = {}".format(ssn))
+    tell = cur.fetchone()
+    return tell is not None
+
+
+def addEmployee():
+    ssn = input("To add a new employee please enter their SSN: ")
+    while len(ssn) != 9 and not ssn.isdigit():
+        ssn = input("Please enter a valid SSN: ")
+    name = input("Please enter their full name: ")
+    state = input("Please enter their state (this should only be a 2-character string): ")
+    while len(state) != 2:
+        state = input("Error. Please enter 2 characters for the state: ")
+    city = input("Please enter their city: ")
+    street = input("Please enter their street: ")
+    zip = input("Please enter their zip_code: ")
+    salary = input("Please enter their salary: ")
+    clear()
+    print('Please chose a Branch from the following (Please enter the 3-digit branch ID): \n')
+    showBranhes()
+    branch = input()
+    while branch not in checkExistingBranch():
+        clear()
+        print("The branch you entered does not exist. Try again: \n")
+        print('Please chose a Branch from the following (Please enter the 3-digit branch ID): \n')
+        showBranhes()
+        branch = input()
+    cur.execute(
+        "Insert into employee values ('{}', '{}' , '{}', '{}', '{}', '{}', '{}');".format(state, city,
+                                                                                          street, zip, salary,
+                                                                                          ssn, name))
+
+    choice = input("What type of employee do you want to add?\n" +
+                   "\t1: Teller\n\t2: Manager\nEnter: ")
+    choice = choice.replace(" ", "")  # deletes any whitespace
+    while choice != "1" and choice != "2":
+        choice = input("Invalid input\nEnter a valid choice: ")
+    if choice == "1":
+        cur.execute("INSERT INTO teller values ('{}', '{}', {})".format(ssn, branch, True))
+        print("Successfully added the new teller to the branch {}".format(branch))
+    else:
+        cur.execute("INSERT INTO manager values ('{}', '{}', {})".format(ssn, branch, True))
+        print("Successfully added the new manager to the branch {}".format(branch))
+
+
 def showAnalytics():
+    print("Welcome to Analytics.")
+    choice = input("Do you want to check the "+
+                   "net worth of all customers "+
+                   "for a branch or system wide\n"+
+                   "1: Branch\n2: System wide\n")
+    while choice != "1" and choice != "2":
+        choice = input("Please enter a valid choice: ")
+    if choice == "1":
+        print("What branch do you want to run this test on: ")
+        showBranhes()
+        branch = input()
+        while branch not in checkExistingBranch():
+            clear()
+            print("The branch you entered does not exist. Try again: \n")
+            print('Please chose a Branch from the following (Please enter the 3-digit branch ID): \n')
+            showBranhes()
+            branch = input()
+        cur.execute("SELECT SUM(balance),homebranch FROM account " +
+                    "Join owns Join customer ON customer.cid = owns.ownedby " +
+                    "ON owns.account = account.accid " +
+                    "WHERE homebranch = '{}' GROUP BY customer.homebranch;".format(branch))
+        net = cur.fetchone()[0]
+        print("The networth of the branch {} is ${}".format(branch, net))
+    else:
+        cur.execute("SELECT SUM(balance) FROM account " +
+                    "Join owns Join customer ON customer.cid = owns.ownedby " +
+                    "ON owns.account = account.accid ")
+        net = cur.fetchone()[0]
+        print("The networth of all of our bank's customers is ${}".format(net))
     return
 
 
@@ -540,7 +621,7 @@ def main():
                         showStatement(cid)
 
                     elif choix == '8':
-                        showPendingTransactions()
+                        showPendingTransactions(cid)
 
                     elif choix == '9':
                         main()
@@ -575,6 +656,10 @@ def main():
             clear()
 
             if choice1 == '1':
+                if not isTeller(eid):
+                    print("Sorry you are not a manager or your SSN is not in our system.\n" +
+                          "Returning you to the main screen")
+                    continue
                 print('Welcome Teller')
                 print('''
                         1. Show Customer information
@@ -600,6 +685,10 @@ def main():
                     externalTransfer()
 
             elif choice1 == '2':
+                if not isManager(eid):
+                    print("Sorry you are not a manager or your SSN is not in our system.\n" +
+                          "Returning you to the main screen")
+                    continue
                 print('Welcome Manager')
                 print('''
                                     1. Show Customer information
@@ -631,7 +720,7 @@ def main():
                     transfer(askForCID())
 
                 elif choice2 == '6':
-                    externalTransfer()
+                    externalTransfer(askForCID())
 
                 elif choice2 == '7':
                     addInterest()
@@ -647,7 +736,7 @@ def main():
 
                 else:
                     print('Invalid Choice.. Returning to main')
-                    main()
+                    continue
 
         elif (choice == '3'):
             print('Goodbye...Hope to see you soon!')
@@ -655,7 +744,8 @@ def main():
 
         else:
             print('Invalid Choice')
-            main()
+            continue
+
 def deleteAccount():
     # This function allows customers/managers to delete accounts
     print("Are you sure you would like to remove your account? ")
@@ -689,7 +779,6 @@ def deleteAccount():
                 cur.execute("Delete from Customer  where Customer.cid = '{}';".format(id))
                 connect.commit()
                 main()
-
 
     elif ans.lower() == 'no':
         print("No problem.. Returning to main")
