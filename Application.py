@@ -237,39 +237,68 @@ def check_account(cid,accids):
     if cid not in arr:
         return False
     return True
+def check_manager(ssn):
+    cur.execute("SELECT ssn FROM manager")
+    check = cur.fetchall()
+    arr = []
+    for row in check:
+        arr.append(row[0])
+    if ssn not in arr:
+        return False
+    return True
+
+
+
+
+
+
+
+
+
 #Task for Timmy
-def withdraw(cid):
+def withdraw(cid, man):
     # This function allows customers/managers/tellers to withdraw amounts
-    accids = input('Enter Account ID: ')
-    if check_account(cid,accids) != True:
-        print('Not your account')
-        return
+    accids = ""
+    if man != 1:
+        accids = input('Enter Account ID: ')
+        if check_account(cid, accids) != True:
+            print('Not your account')
+            return
     cur.execute("SELECT balance FROM account WHERE account.accid = '{}';".format(accids))
     amt = cur.fetchone()
     take = input('Enter withdraw amount')
     bal = float(amt[0])-float(take)
     cur.execute("UPDATE account SET balance = {} WHERE account.accid = '{}';".format(bal, accids))
     connect.commit()
+    desc = input('Type withdraw description: ')
+    take = -1 * float(take)
+    cur.execute("INSERT into transactions values ('{}', {}, '{}', {}, {}, '{}');".format(desc, take, "withdraw", random.randint(100000000000, 999999999999), accids, date.today()))
+    connect.commit()
     print('Withdraw Complete')
 
 #Task for Timmy
 
-def deposit(cid):
+def deposit(cid, man):
     #This function allows tellers/customers/managers to deposit amounts
-    accids = input('Enter Account ID: ')
-    if check_account(cid, accids) != True:
-        print('Not your account')
-        return
+    accids = ""
+    if man != 1:
+        accids = input('Enter Account ID: ')
+        if check_account(cid, accids) != True:
+            print('Not your account')
+            return
     cur.execute("SELECT balance FROM account WHERE account.accid = '{}';".format(accids))
     amt = cur.fetchone()
     dep = input('Enter deposit amount')
     bal = float(amt[0]) + float(dep)
     cur.execute("UPDATE account SET balance = {} WHERE account.accid = '{}';".format(bal, accids))
     connect.commit()
+    desc = input('Type deposit description: ')
+    dep = float(dep)
+    cur.execute("INSERT into transactions values ('{}', {}, '{}', {}, {}, '{}');".format(desc, dep, "deposit", random.randint(100000000000, 999999999999), accids, date.today()))
+    connect.commit()
+    print('Withdraw Complete')
     print('Deposit Complete')
-    cur.execute("SELECT * FROM account;")
-    rec = cur.fetchall()
-    print(rec)
+
 
     return
 
@@ -277,19 +306,31 @@ def deposit(cid):
 #Task for Timmy      I'll have to check once I get the database connected but I don't think we need the external
 # transfer function. I think one will be fine because knowing the account ID is all that we need, regardless of the branch.
 
-def transfer(cid):
+def transfer(cid, man):
     # This function allows customers/managers/tellers to transfer amounts
     initial = input('Enter account number from the account you wish to transfer from: ')
-    if check_account(cid,initial) != True:
-        print('Not your account: ')
-        return
-    cur.execute("SELECT homebranch FROM customer WHERE customer.cid = '{}';".format(cid))
-    branch1 = cur.fetchone()
-    destination = input('Enter account number that you would like to transfer funds into: ')
-    cur.execute("SELECT ownedby FROM owns WHERE owns.account = '{}';".format(destination))
-    num = cur.fetchone()
-    cur.execute("SELECT homebranch FROM customer WHERE customer.cid = '{}';".format(num[0]))
-    branch2 = cur.fetchone()
+    if man != 1:
+        if check_account(cid, initial) != True:
+            print('Not your account')
+            return
+    if man == 0:
+        cur.execute("SELECT homebranch FROM customer WHERE customer.cid = '{}';".format(cid))
+        branch1 = cur.fetchone()
+        destination = input('Enter account number that you would like to transfer funds into: ')
+        cur.execute("SELECT ownedby FROM owns WHERE owns.account = '{}';".format(destination))
+        num = cur.fetchone()
+        cur.execute("SELECT homebranch FROM customer WHERE customer.cid = '{}';".format(num[0]))
+        branch2 = cur.fetchone()
+    else:
+        cur.execute("SELECT homebranch FROM customer WHERE customer.cid = (SELECT ownedby FROM owns WHERE owns.account "
+                    "= '{}');".format(initial))
+        branch1 = cur.fetchone()
+        destination = input('Enter account number that you would like to transfer funds into: ')
+        cur.execute("SELECT ownedby FROM owns WHERE owns.account = '{}';".format(destination))
+        num = cur.fetchone()
+        cur.execute("SELECT homebranch FROM customer WHERE customer.cid = (SELECT ownedby FROM owns WHERE owns.account "
+                    "= '{}');".format(destination))
+        branch2 = cur.fetchone()
     if branch1[0] != branch2[0]:
         print('This is an external transfer')
         return
@@ -304,22 +345,36 @@ def transfer(cid):
     connect.commit()
     cur.execute("UPDATE account SET balance = {} WHERE account.accid = '{}';".format(bal_i, initial))
     connect.commit()
+    desc = input('Type transfer description: ')
+    transf = 'transfer'
+    trans = float(trans)
+    cur.execute("INSERT into transactions values ('{}', {}, '{}', {}, {}, '{}');".format(desc, (trans*-1), transf, random.randint(100000000000, 999999999999), initial, date.today()))
+    cur.execute("INSERT INTO transactions values ('{}', {}, '{}', {}, {}, '{}');".format(desc, trans, transf, random.randint(100000000000, 999999999999), destination, date.today()))
+    connect.commit()
     print('Transfer Complete')
     return
 #Task for Timmy
-def externalTransfer(cid):
+def externalTransfer(cid, man):
     # This function allows customers/managers/tellers to transfer amounts to an account of another bank
     initial = input('Enter account number from the account you wish to transfer from: ')
-    if check_account(cid, initial) != True:
-        print('Not your account: ')
-        return
-    cur.execute("SELECT homebranch FROM customer WHERE customer.cid = '{}';".format(cid))
-    branch1 = cur.fetchone()
-    destination = input('Enter account number that you would like to transfer funds into: ')
-    cur.execute("SELECT ownedby FROM owns WHERE owns.account = '{}';".format(destination))
-    num = cur.fetchone()
-    cur.execute("SELECT homebranch FROM customer WHERE customer.cid = '{}';".format(num[0]))
-    branch2 = cur.fetchone()
+    if man == 0:
+        cur.execute("SELECT homebranch FROM customer WHERE customer.cid = '{}';".format(cid))
+        branch1 = cur.fetchone()
+        destination = input('Enter account number that you would like to transfer funds into: ')
+        cur.execute("SELECT ownedby FROM owns WHERE owns.account = '{}';".format(destination))
+        num = cur.fetchone()
+        cur.execute("SELECT homebranch FROM customer WHERE customer.cid = '{}';".format(num[0]))
+        branch2 = cur.fetchone()
+    else:
+        cur.execute("SELECT homebranch FROM customer WHERE customer.cid = (SELECT ownedby FROM owns WHERE owns.account "
+                    "= '{}');".format(initial))
+        branch1 = cur.fetchone()
+        destination = input('Enter account number that you would like to transfer funds into: ')
+        cur.execute("SELECT ownedby FROM owns WHERE owns.account = '{}';".format(destination))
+        num = cur.fetchone()
+        cur.execute("SELECT homebranch FROM customer WHERE customer.cid = (SELECT ownedby FROM owns WHERE owns.account "
+                    "= '{}');".format(destination))
+        branch2 = cur.fetchone()
     if branch1[0] == branch2[0]:
         print('This is not an external transfer')
         return
@@ -334,6 +389,12 @@ def externalTransfer(cid):
     cur.execute("UPDATE account SET balance = {} WHERE account.accid = '{}';".format(bal_d, destination))
     connect.commit()
     cur.execute("UPDATE account SET balance = {} WHERE account.accid = '{}';".format(bal_i, initial))
+    connect.commit()
+    desc = input('Type transfer description: ')
+    transf = 'transfer'
+    trans = float(trans)
+    cur.execute("INSERT into transactions values ('{}', {}, '{}', {}, {}, '{}');".format(desc, (trans * -1), transf, random.randint(100000000000,999999999999), initial, date.today()))
+    cur.execute("INSERT INTO transactions values ('{}', {}, '{}', {}, {}, '{}');".format(desc, trans, transf, random.randint(100000000000, 999999999999), destination, date.today()))
     connect.commit()
     print('Transfer Complete')
     return
@@ -419,16 +480,16 @@ def main():
                         createAccountExistingCust(cid)
 
                     elif choix == '2':
-                        withdraw(cid)
+                        withdraw(cid, 0)
 
                     elif choix == '3':
-                        deposit(cid)
+                        deposit(cid, 0)
 
                     elif choix == '4':
-                        transfer(cid)
+                        transfer(cid, 0)
 
                     elif choix == '5':
-                        externalTransfer(cid)
+                        externalTransfer(cid, 0)
 
                     elif choix == '6':
                         deleteAccount()
@@ -519,16 +580,16 @@ def main():
                     showTellerInformation()
 
                 elif choice2 == '3':
-                    withdraw()
+                    withdraw(0, 1)
 
                 elif choice2 == '4':
-                    deposit()
+                    deposit(0, 1)
 
                 elif choice2 == '5':
-                    transfer()
+                    transfer(0, 1)
 
                 elif choice2 == '6':
-                    externalTransfer()
+                    externalTransfer(0, 1)
 
                 elif choice2 == '7':
                     addInterest()
