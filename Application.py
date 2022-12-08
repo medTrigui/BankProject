@@ -5,8 +5,8 @@ import random
 
 connect = psycopg2.connect(host='localhost',
                            user='postgres',
-                           password='Tonsofun02!',  # Tonsofun02
-                           dbname='BankProject2')  # BankProject2
+                           password='WowNice!',  # Tonsofun02
+                           dbname='postgres')  # BankProject2
 
 
 cur = connect.cursor()
@@ -41,7 +41,7 @@ def showCustomerInformation():
     # Can be accessed by both teller and manager
     table = []
     cur.execute("SELECT * FROM CUSTOMER;")
-    rec = cur.fetchone()
+    rec = cur.fetchall()
     for row in rec:
         table.append(row)
     print(table)
@@ -54,7 +54,7 @@ def showTellerInformation():
     # can be accessed by managers only
     table = []
     cur.execute("SELECT * FROM Teller;")
-    rec = cur.fetchone()
+    rec = cur.fetchall()
     for row in rec:
         table.append(row)
     print(table)
@@ -194,7 +194,7 @@ def createAccountNewCust():
         balance = 0
         cur.execute("Insert into account values ({}, {} ,'{}');".format(acc_id, balance, acc_type))
         connect.commit()
-        cur.execute("Insert into owns values ({}, {});".format(acc_id, i))
+        cur.execute("Insert into owns values ({}, '{}');".format(acc_id, i))
         connect.commit()
         cur.execute("SELECT name FROM customer WHERE customer.cid = '{}';".format(i))
         a = cur.fetchone()
@@ -443,9 +443,8 @@ def showStatement():
         print('Incorrect account number')
         return
     latest = date.today()
-    latest.month = latest.month - 1
     cur.execute(
-        "SELECT t_type, amount FROM transactions WHERE transactions.performedby = '{}' AND transactions.date > '{}-{}-{}' AND transactions.date < '{}-{}-{}'};".format(
+        "SELECT t_type, amount, date FROM transactions WHERE transactions.performedby = '{}' AND transactions.date > '{}-{}-{}' AND transactions.date < '{}-{}-{}';".format(
             acct,
             latest.year -1 if latest.month == 1 else latest.year,
             12 if latest.month == 1 else latest.month - 1,
@@ -454,8 +453,18 @@ def showStatement():
             latest.month,
             1))
     transactions = cur.fetchall()
+    cur.execute(
+        "SELECT t_type, amount, date FROM transactions WHERE transactions.performedby = '{}' AND transactions.date > '{}-{}-{}' ORDER BY DATE ASC;".format(
+            acct,
+            latest.year - 1 if latest.month == 1 else latest.year,
+            latest.month,
+            1))
+    ptrans = cur.fetchall()
     cur.execute("SELECT balance FROM account WHERE accid = '{}'".format(acct))
     balance = cur.fetchone()[0]
+    if ptrans is not None:
+        for rows in ptrans[::-1]:
+            balance += -rows[1]
     for rows in transactions[::-1]:  # reversed the list transactions going to rebuild the balance
         balance += -rows[1]
     text = "Your starting balance for the month was: ${}\n".format(balance)
@@ -467,7 +476,7 @@ def showStatement():
     return
 
 # task for Humberto
-def showPendingTransactions(cid):
+def showPendingTransactions():
     cid = input("Enter a CID: ")
     acct = input('Enter account number: ')
     if not check_account(cid, acct):
@@ -652,13 +661,19 @@ def showAnalytics():
                     "Join owns Join customer ON customer.cid = owns.ownedby " +
                     "ON owns.account = account.accid " +
                     "WHERE homebranch = '{}' GROUP BY customer.homebranch;".format(branch))
-        net = cur.fetchone()[0]
+        net = cur.fetchone()
+        if net is None:
+            print("Sorry this branch doesn't have any customers or accounts.")
+            return
+        net = net[0]
         print("The networth of the branch {} is ${}".format(branch, net))
     else:
         cur.execute("SELECT SUM(balance) FROM account " +
                     "Join owns Join customer ON customer.cid = owns.ownedby " +
                     "ON owns.account = account.accid ")
         net = cur.fetchone()[0]
+        if net is None:
+            net = 0;
         print("The networth of all of our bank's customers is ${}".format(net))
     return
 
@@ -765,7 +780,7 @@ def main():
 
             if choice1 == '1':
                 if not isTeller(eid):
-                    print("Sorry you are not a manager or your SSN is not in our system.\n" +
+                    print("Sorry you are not a teller or your SSN is not in our system.\n" +
                           "Returning you to the main screen")
                     continue
                 print('Welcome Teller')
