@@ -546,7 +546,7 @@ def addOverDraftFees():
             curAccount = rows[0]
             cur.execute("SELECT fee FROM account_type WHERE acctype = '{}'".format(rows[1]))
             fee = cur.fetchone()[0]
-            cur.execute("UPDATE account SET balance = balance - {} WHERE account.accid = {}".format(fee, curAccount))
+            cur.execute("UPDATE account SET balance = balance - {} WHERE account.accid = '{}'".format(fee, curAccount))
             connect.commit()
     print("Added Overdraft Fees")
     return
