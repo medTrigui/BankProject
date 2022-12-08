@@ -5,8 +5,8 @@ import random
 
 connect = psycopg2.connect(host='localhost',
                            user='postgres',
-                           password='2002',  # Tonsofun02
-                           dbname='ProjectDDL')  # BankProject2
+                           password='WowNice!',  # Tonsofun02
+                           dbname='postgres')  # BankProject2
 
 cur = connect.cursor()
 
@@ -166,7 +166,7 @@ def createAccountNewCust():
         showBranhes()
         branch = input()
     cur.execute(
-        "Insert into customer values ('{}', '{}' , '{}', '{}', '{}', '{}', '{}');".format(name, i, state, city, street,
+        "Insert into customer (name, cid, state, city, street, zip_code, homebranch) values ('{}', '{}' , '{}', '{}', '{}', '{}', '{}');".format(name, i, state, city, street,
                                                                                           zip, branch))
     connect.commit()
 
@@ -288,7 +288,6 @@ def deposit(cid, man):
     dep = float(dep)
     cur.execute("INSERT into transactions values ('{}', {}, '{}', {}, {}, '{}');".format(desc, dep, "deposit", random.randint(100000000000, 999999999999), accids, date.today()))
     connect.commit()
-    print('Withdraw Complete')
     print('Deposit Complete')
 
 
@@ -394,12 +393,13 @@ def externalTransfer(cid, man):
 
 
 # task for Timmy
-def showStatement(cid):
+def showStatement():
     '''the statement of the month of an account should list all the transactions for this account d
     during this month order by time.
     Furthermore, the account balance after each transaction should be shown.
      Finally, you should show the final account balance for the account at the end of the month.
     '''
+    cid = input("Enter CID: ")
     acct = input('Enter account number: ')
     if not check_account(cid, acct):
         print('Incorrect account number')
@@ -407,15 +407,30 @@ def showStatement(cid):
     latest = date.today()
     latest.month = latest.month - 1
     cur.execute(
-        "SELECT t_type, amount FROM transactions WHERE transactions.performedby = '{}' AND transactions.date > '{}-{}-{}'};".format(
+        "SELECT t_type, amount FROM transactions WHERE transactions.performedby = '{}' AND transactions.date > '{}-{}-{}' AND transactions.date < '{}-{}-{}'};".format(
             acct,
-            latest.year,
+            latest.year -1 if latest.month == 1 else latest.year,
             12 if latest.month == 1 else latest.month - 1,
-            latest.day))
+            1,
+            latest.year,
+            latest.month,
+            1))
+    transactions = cur.fetchall()
+    cur.execute("SELECT balance FROM account WHERE accid = '{}'".format(acct))
+    balance = cur.fetchone()[0]
+    for rows in transactions[::-1]:  # reversed the list transactions going to rebuild the balance
+        balance += -rows[1]
+    text = "Your starting balance for the month was: ${}\n".format(balance)
+    for rows in transactions:
+        balance += rows[1]
+        text += "{}ed ${} on {} with a resulting balance of ${}.\n".format(rows[0], rows[1], rows[2], balance)
+    text += "Your ending balance for the month was ${}".format(balance)
+    print(text)
     return
 
 # task for Humberto
 def showPendingTransactions(cid):
+    cid = input("Enter a CID: ")
     acct = input('Enter account number: ')
     if not check_account(cid, acct):
         print('Incorrect account number')
@@ -424,9 +439,9 @@ def showPendingTransactions(cid):
     cur.execute(
         "SELECT t_type, amount, date FROM transactions WHERE transactions.performedby = '{}' AND transactions.date > '{}-{}-{}' ORDER BY DATE ASC;".format(
             acct,
-            latest.year,
-            12 if latest.month == 1 else latest.month - 1,
-            latest.day))
+            latest.year-1 if latest.month == 1 else latest.year,
+            latest.month,
+            1))
     transactions = cur.fetchall()
     cur.execute("SELECT balance FROM account WHERE accid = '{}'".format(acct))
     balance = cur.fetchone()[0]
@@ -434,9 +449,9 @@ def showPendingTransactions(cid):
         balance += -rows[1]
     text = "Your starting balance for the month was: ${}\n".format(balance)
     for rows in transactions:
-        balance += -rows[1]
-        text += "{}ed ${} on {} with a resulting balance of ${}.\n".format(rows[0], rows[1], rows[3], balance)
-    text = "Your ending balance for the month was ${}".format(balance)
+        balance += rows[1]
+        text += "{}ed ${} on {} with a resulting balance of ${}.\n".format(rows[0], rows[1], rows[2], balance)
+    text += "Your ending balance for the month was ${}".format(balance)
     print(text)
     return
 
@@ -446,12 +461,11 @@ def showPendingTransactions(cid):
 # Task for Humberto: manager functions
 def addInterest():
     bid = input("Please select you branch's BID: ")
-    cur.execute("SELECT CID FROM customer WHERE customer.BranchID = '{} '".format(bid))
+    cur.execute("SELECT CID FROM customer WHERE customer.homebranch = '{} '".format(bid))
     customers = {}
 
     for row in cur.fetchall():
         customers[row[0]] = ""
-    print(customers)
     cur.execute("SELECT * FROM account;")
     negativeBalances = cur.fetchall()
     for rows in negativeBalances:
@@ -476,7 +490,7 @@ def addOverDraftFees():
     for row in cur.fetchall():
         customers[row[0]] = ""
 
-    cur.execute("SELECT accid, account_type FROM account WHERE account.balance < 0;")
+    cur.execute("SELECT accid, hastype FROM account WHERE account.balance < 0;")
     negativeBalances = cur.fetchall()
     for rows in negativeBalances:
         cur.execute("SELECT ownedby FROM OWNS where account = '{}'".format(rows[0]))
@@ -559,10 +573,10 @@ def addEmployee():
         showBranhes()
         branch = input()
     cur.execute(
-        "Insert into employee values ('{}', '{}' , '{}', '{}', '{}', '{}', '{}');".format(state, city,
-                                                                                          street, zip, salary,
+        "Insert into employee values ('{}', '{}' , '{}', '{}', '{}', '{}', '{}');".format(street, city,
+                                                                                          state, zip, salary,
                                                                                           ssn, name))
-
+    connect.commit()
     choice = input("What type of employee do you want to add?\n" +
                    "\t1: Teller\n\t2: Manager\nEnter: ")
     choice = choice.replace(" ", "")  # deletes any whitespace
@@ -570,9 +584,11 @@ def addEmployee():
         choice = input("Invalid input\nEnter a valid choice: ")
     if choice == "1":
         cur.execute("INSERT INTO teller values ('{}', '{}', {})".format(ssn, branch, True))
+        connect.commit()
         print("Successfully added the new teller to the branch {}".format(branch))
     else:
         cur.execute("INSERT INTO manager values ('{}', '{}', {})".format(ssn, branch, True))
+        connect.commit()
         print("Successfully added the new manager to the branch {}".format(branch))
 
 
@@ -672,10 +688,10 @@ def main():
                         deleteAccount()
 
                     elif choix == '7':
-                        showStatement(cid)
+                        showStatement()
 
                     elif choix == '8':
-                        showPendingTransactions(cid)
+                        showPendingTransactions()
 
                     elif choix == '9':
                         main()
@@ -754,7 +770,8 @@ def main():
                                     7. Add Interest
                                     8. Add Overdraft fees
                                     9. Add Account fees
-                                    10. Show Analytics''')
+                                    10. Show Analytics
+                                    11. Add Employee''')
 
                 choice2 = input()
                 clear()
@@ -788,6 +805,9 @@ def main():
 
                 elif choice2 == '10':
                     showAnalytics()
+
+                elif choice2 == '11':
+                    addEmployee()
 
                 else:
                     print('Invalid Choice.. Returning to main')
